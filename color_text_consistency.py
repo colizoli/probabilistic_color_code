@@ -5,10 +5,15 @@ Color code for Word documents (DOCX): Colors of consciousness
 O.Colizoli 2025
 Python 3.9
 
-To do: Removing "l" right? Need to recompute probabilities
-
 Notes
 -------------
+The following packages need to be installed: python-docx, pandas, numpy
+>> pip install python-docx pandas numpy
+---
+To run:
+>> python color_text_consistency.py
+You will be prompted with the book name and whether you want to change the font type and size.
+---
 This script will loop through individual letters and reformat each occurrence of a letter with a specific color (RGB);
 Each letter is also assigned a consistency value: e.g. if "a" is 100% consistent, then all "a"s will receive the same color. 
 If "a" is 75% consistent, then it will receive a different color with 25% probability. 
@@ -20,19 +25,12 @@ The reformatted document is saved as a new document.
 Fonts need to be already installed on the computer.
 ---
 Books are found in the directory: os.path.join(os.getcwd(), 'books')
-The name of book input at the prompt should exclude the 'docx' file extension: "books/{}.docx".format(book_name)
+The name of book input at the prompt should exclude the 'docx' file extension: "books/sub-{}_book{}.docx".format(subject, book_number)
 The new colored version will be saved as: "books/{}_processed.docx".format(book_name)
 ---
 Letters and colors to be changed are imported from a CSV file in the directory: os.path.join(os.getcwd(), 'colors')
 The CSV file with colors needs to have the following columns: 'letter', 'r', 'g', 'b'
 Letters are case-sensitive.
----
-The following packages need to be installed: python-docx, pandas, numpy
->> pip install python-docx pandas numpy
----
-To run:
->> python color_text_consistency.py
-You will be prompted with the book name and whether you want to change the font type and size.
 ---
 Character formatting is applied at the docx.text.run.Run level. 
 The script can be adjusted to change the font typeface, size, bold, italic, 
@@ -145,36 +143,52 @@ def replace_letters_with_colors():
     ------
     See notes at top of script for more information. 
     '''
-    subject = input('Subject Number: ')
-    book_name = input('Name of book: ')
-    change_color = int(input('Change colors? (1 for Yes, 0 for No): '))
-    change_font = int(input('Change Font? (1 for Yes, 0 for No): '))
+    # subject = input('Subject Number: ')
+    # book_number = input('Book Number: ')
+    # change_color = int(input('Change colors? (1 for Yes, 0 for No): '))
+    # change_font = int(input('Change Font? (1 for Yes, 0 for No): '))
+    subject = '02'
+    book_number = '1'
+    change_color = 1
+    change_font = 1
     
     if change_font:
-        replace_font = input('Font name: ')
-        replace_size = np.float32(input('Font size: '))
+        # replace_font = input('Font name: ')
+        # replace_size = np.float32(input('Font size: '))
+        replace_font = 'Arial Black'
+        replace_size = 11
 
-    in_book_filename = os.path.join('books', '{}.docx'.format(book_name)) # original
-    out_book_filename = os.path.join('books', '{}_processed.docx'.format(book_name)) # save as new
+    in_book_filename = os.path.join('books', 'sub-{}_book{}.docx'.format(subject, book_number)) # original
+    out_book_filename = os.path.join('books', 'sub-{}_book{}_processed.docx'.format(subject, book_number)) # save as new
     
     if change_color:
         # Define letters and colors to replace
         df_letters = pd.read_csv(os.path.join('colors', 'sub-{}_prediction_space.csv'.format(subject))) # the letters and their consistency conditions
         df_colors = pd.read_csv(os.path.join('colors', 'rgb_colors.csv')) # the CSV file with the 'letters' and 'r', 'g', 'b' values
         # join these two dataframes on the color numbers        
-        df = df_letters.merge(df_colors, how='inner', on='colorcode')
+        df = df_letters.merge(df_colors, how='inner', on='colour_id')
         
-        ### DOUBLE CHECK THIS!! ###
-        # rows are letters, columns are the corresponding letter's colorcode index
-        prob_dist = pd.read_csv(os.path.join('colors', 'probability_distributions.csv')) 
-        # numpy.random.choice(a, p)
-        a = df['colorcode']
-        
+        # get only train==yes letters
+        df = df[df['train']=="yes"].copy()
+
         letters = df['letter'] # vowels including y
         colors_r = df['r'] # red value for RGB code
         colors_g = df['g'] # green value for RGB code
         colors_b = df['b'] # blue value for RGB code
-
+        
+        # determine which letter set this participant has for the probability distributions
+        if "e" in np.array(letters):
+            letter_set = "set1"
+        elif "a" in np.array(letters):
+            letter_set = "set2"
+        else:
+            print("ERROR: check letter sets! Letters not in either set.")
+        
+        ### DOUBLE CHECK THIS!! ###
+        # rows are letters, columns are the corresponding letter's colorcode index
+        prob_dist = pd.read_csv(os.path.join('colors', 'probability_distributions_{}.csv'.format(letter_set))) 
+        a = df['colour_id'] # array of color codes in order of the letters for this participant
+        
         # First, run the letter-by-letter search and replace loop
         doc = Document(in_book_filename)
         for idx_letter,letter in enumerate(letters): # loop over letters
@@ -190,9 +204,9 @@ def replace_letters_with_colors():
                     end = start + 1 
                     current_run = isolate_run(paragraph, start, end)
                     if current_run.text == letter: # only change the color of letters in the CSV file (case-sensitive)
-                        # draw color based on distribution 
+                        # draw color based on distribution: numpy.random.choice(a, p)
                         colorcode = np.random.choice(a = np.array(a), p = np.array(p))
-                        current_run.font.color.rgb = RGBColor(int(df_colors['r'][colorcode]), int(df_colors['g'][colorcode]), int(df_colors['b'][colorcode]))   
+                        current_run.font.color.rgb = RGBColor(int(df_colors['r'][colorcode-1]), int(df_colors['g'][colorcode-1]), int(df_colors['b'][colorcode-1]))   
                         # If you want to change other formatting options of the individual letters, you can specify that here:
                         # current_run.font.size
                         # current_run.font.name 
