@@ -2,6 +2,8 @@
 #SBATCH --mem=256G 
 #SBATCH --time=36:00:00
 #SBATCH --output=/project/3018051.01/olympia/anya_books/probabilistic_color_code-main/job_run_book1_output.txt
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=myemail.com
 
 module load anaconda3
 source activate reading39
