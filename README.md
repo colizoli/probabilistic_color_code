@@ -12,7 +12,7 @@ sub-xxx_prediction_space.csv (for all subjects)
 
 There are two groups of letters, counterbalanced across participants (trainees).
 Letter group 1: e	s	m	q	x	c	h	o
-Letter group 2: 
+Letter group 2: a	n	w	z	j	f	r	i
 
 In the probability distribution CSV files, the letter identity row=column, should correspond to that letter's consistency category. 
 For instance, if "x" is assigned to the 100% consistency category, then for row=x=column, should have the value of "1" and all other columns should have a value of "0".
