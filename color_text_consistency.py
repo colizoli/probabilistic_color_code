@@ -19,6 +19,10 @@ Each letter is also assigned a consistency value: e.g. if "a" is 100% consistent
 If "a" is 75% consistent, then it will receive a different color with 25% probability. 
 The other colors are chosen from a uniform distribution.
 
+IMPORTANT!!
+The order of the letters in the probability_distributions.csv files 
+need to match the order of the letters in the sub-xxx_prediction_space.csv files!
+
 If 'change_color' is True, the script will run the coloring-consistency process described above. 
 If 'change_font' is True, the script will replace the entire document's font typeface and font size. 
 The reformatted document is saved as a new document. 
@@ -29,7 +33,7 @@ The name of book input at the prompt should exclude the 'docx' file extension: "
 The new colored version will be saved as: "books/{}_processed.docx".format(book_name)
 ---
 Letters and colors to be changed are imported from a CSV file in the directory: os.path.join(os.getcwd(), 'colors')
-The CSV file with colors needs to have the following columns: 'letter', 'r', 'g', 'b'
+The CSV file with colors needs to have the following columns: 'letter', 'rgb_r', 'rgb_g', 'rbg_b'
 Letters are case-sensitive.
 ---
 Character formatting is applied at the docx.text.run.Run level. 
@@ -37,7 +41,7 @@ The script can be adjusted to change the font typeface, size, bold, italic,
 and underline of single letters or the whole document.
 A Run object has a read-only font property providing access to a Font object. 
 A run's Font object (docx.text.run.Run.font) provides properties for getting and setting the character formatting for that run.
-E.g. current_run.font.color.rgb = RGBColor(r, g, b) 
+E.g. current_run.font.color.rgb = RGBColor(rgb_r, rgb_g, rbg_b) 
 ---
 The function for isolating individual letters as runs, isolate_run(), was taken from here:
 See: https://github.com/python-openxml/python-docx/issues/980
@@ -147,10 +151,10 @@ def replace_letters_with_colors():
     # book_number = input('Book Number: ')
     # change_color = int(input('Change colors? (1 for Yes, 0 for No): '))
     # change_font = int(input('Change Font? (1 for Yes, 0 for No): '))
-    subject = '02'
+    subject = '01'
     book_number = '1'
-    change_color = 1
-    change_font = 1
+    change_color = True
+    change_font = False
     
     if change_font:
         # replace_font = input('Font name: ')
@@ -170,11 +174,9 @@ def replace_letters_with_colors():
         
         # get only train==yes letters
         df = df[df['train']=="yes"].copy()
+        df.reset_index(inplace=True)
 
         letters = df['letter'] # vowels including y
-        colors_r = df['r'] # red value for RGB code
-        colors_g = df['g'] # green value for RGB code
-        colors_b = df['b'] # blue value for RGB code
         
         # determine which letter set this participant has for the probability distributions
         if "e" in np.array(letters):
@@ -187,11 +189,12 @@ def replace_letters_with_colors():
         ### DOUBLE CHECK THIS!! ###
         # rows are letters, columns are the corresponding letter's colorcode index
         prob_dist = pd.read_csv(os.path.join('colors', 'probability_distributions_{}.csv'.format(letter_set))) 
-        a = df['colour_id'] # array of color codes in order of the letters for this participant
+        color_array = df['colour_id'] # array of color codes in order of the letters for this participant
         
         # First, run the letter-by-letter search and replace loop
         doc = Document(in_book_filename)
         for idx_letter,letter in enumerate(letters): # loop over letters
+            print(letter)
             # get corresponding probability distribution
             p = prob_dist[letter]
             
@@ -205,8 +208,20 @@ def replace_letters_with_colors():
                     current_run = isolate_run(paragraph, start, end)
                     if current_run.text == letter: # only change the color of letters in the CSV file (case-sensitive)
                         # draw color based on distribution: numpy.random.choice(a, p)
-                        colorcode = np.random.choice(a = np.array(a), p = np.array(p))
-                        current_run.font.color.rgb = RGBColor(int(df_colors['r'][colorcode-1]), int(df_colors['g'][colorcode-1]), int(df_colors['b'][colorcode-1]))   
+                        colorcode = np.random.choice(a = np.array(color_array), p = np.array(p))
+                        # current_run.font.color.rgb = RGBColor(int(df_colors['rgb_r'][colorcode-1]), int(df_colors['rgb_g'][colorcode-1]), int(df_colors['rgb_b'][colorcode-1]))
+                        current_run.font.color.rgb = RGBColor(
+                            int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_r'].iloc[0]), 
+                            int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_g'].iloc[0]), 
+                            int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_b'].iloc[0]), 
+                            )   
+                                         
+                        print(colorcode)
+                        # print(
+                        #     int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_r'].iloc[0]),
+                        #     int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_g'].iloc[0]),
+                        #     int(df_colors.loc[df_colors['colour_id'] == colorcode, 'rgb_b'].iloc[0]),
+                        # )
                         # If you want to change other formatting options of the individual letters, you can specify that here:
                         # current_run.font.size
                         # current_run.font.name 
