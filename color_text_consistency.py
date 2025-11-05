@@ -167,7 +167,7 @@ def replace_letters_with_colors():
     
     if change_color:
         # Define letters and colors to replace
-        df_letters = pd.read_csv(os.path.join('colors', 'sub-{}_prediction_space.csv'.format(subject))) # the letters and their consistency conditions
+        df_letters = pd.read_csv(os.path.join('colors', 'sub-{}_letter_colour_pairs_sorted.csv'.format(subject))) # the letters and their consistency conditions
         df_colors = pd.read_csv(os.path.join('colors', 'rgb_colors.csv')) # the CSV file with the 'letters' and 'r', 'g', 'b' values
         # join these two dataframes on the color numbers        
         df = df_letters.merge(df_colors, how='inner', on='colour_id')
@@ -181,10 +181,18 @@ def replace_letters_with_colors():
         # determine which letter set this participant has for the probability distributions
         if "e" in np.array(letters):
             letter_set = "set1"
+            order =[ 'e', 's', 'm', 'q', 'x', 'c', 'h', 'o'] # needs to match the order of letters in the probabilit_distributions file
         elif "a" in np.array(letters):
             letter_set = "set2"
+            order = ['a', 'n', 'w', 'z', 'j', 'f', 'r', 'i'] # needs to match the order of letters in the probabilit_distributions file
+
         else:
             print("ERROR: check letter sets! Letters not in either set.")
+        
+        # make 'letters' a categorical column with that order
+        df['letter'] = pd.Categorical(df['letter'], categories=order, ordered=True)
+        # sort by 'letters' using that order
+        df = df.sort_values('letter').reset_index(drop=True)
         
         ### DOUBLE CHECK THIS!! ###
         # rows are letters, columns are the corresponding letter's colorcode index
